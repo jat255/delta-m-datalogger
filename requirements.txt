@@ -1,0 +1,5 @@
+influxdb ~= 5.3.1
+pygatt ~= 4.0.5
+pexpect ~= 4.8.0
+tqdm ~= 4.56.0
+python-dotenv ~= 0.15.0
