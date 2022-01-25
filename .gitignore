@@ -1,0 +1,7 @@
+.env
+.mypy_cache/
+.venv/
+__pycache__/
+logs/
+nano.save
+old_json_output/

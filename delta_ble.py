@@ -1,5 +1,6 @@
 import os
 import time
+import sys
 from argparse import ArgumentParser
 from statistics import mean
 from collections import defaultdict
@@ -16,7 +17,7 @@ from ble import *
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 DOTENV_PATH = os.path.join(FILE_DIR, '.env')
 load_dotenv(dotenv_path=DOTENV_PATH)
-
+ble_logger = logging.getLogger()
 
 def get_args():
     arg_parser = ArgumentParser(description="Log Delta Inverter data")
@@ -29,17 +30,18 @@ def get_args():
 
 
 def setup_logging(args):
-    if args.verbose > 2:
-        args.verbose = 2
+    if args.verbose > 3:
+        args.verbose = 3
 
     verbosity_map = {
         0: logging.WARN,
         1: logging.INFO,
-        2: logging.DEBUG
+        2: logging.DEBUG,
+        3: logging.DEBUG
     }
-    logging.basicConfig()
-    logging.getLogger('pygatt').setLevel(verbosity_map[args.verbose])
-    logging.getLogger(__name__).setLevel(verbosity_map[args.verbose])
+    logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger('pygatt').setLevel(verbosity_map[args.verbose - 1])
+    ble_logger.setLevel(verbosity_map[args.verbose])
 
 
 class DeltaSolarBLE:
@@ -70,10 +72,10 @@ class DeltaSolarBLE:
         except:
             message = ""
         if message:
-            logging.info(
+            ble_logger.debug(
                 f"Received data: {value} -- {hexlify(value)} -- {message}")
             self.data[self.last_message_title].append(message)
-            logging.info(f"Appending to {self.last_message_title} data!")
+            ble_logger.debug(f"Appending to {self.last_message_title} data!")
 
     def get_data(self):
         try:
@@ -82,24 +84,25 @@ class DeltaSolarBLE:
             uuid_write = "ee6d7171-88c6-11e8-b444-060400ef5315"
             uuid_notify = "ee6d7172-88c6-11e8-b444-060400ef5315"
 
-            logging.info(f"Subscribing to: {uuid_notify}")
+            ble_logger.debug(f"Subscribing to: {uuid_notify}")
             device.subscribe(uuid_notify,
                              callback=self.handle_data,
                              indication=False)
-
-            for h in tqdm(sent_values):
+            for h in sent_values:
                 if h in message_string_by_hex:
                     name = message_string_by_hex[h]
                 else:
                     name = 'Unknown'
 
                 time.sleep(.20)
-                logging.info(f"Writing {name} : {h}")
+                ble_logger.debug(f"Writing {name} : {h}")
                 self.last_message_title = name
                 device.char_write(uuid_write, unhexlify(h), False)
 
         except Exception as e:
-            logging.error(f"Received exception: {e}")
+            ble_logger.error(f"Received exception getting data via BT-LE: {e}")
+            self.adapter.stop()
+            raise e
         finally:
             self.adapter.stop()
 
@@ -165,33 +168,64 @@ class DeltaSolarBLE:
                                      f'GROUP BY time(15m)')[('inverter_data', None)])
             last_value = [x['median'] for x in data if x['median']][-1]
             self.data["TodaysEnergy"] = self.data["DailyEnergy"] - last_value
+            if self.data["TodaysEnergy"] < 0:
+                self.data["TodaysEnergy"] = self.data["DailyEnergy"]
         except Exception as e:
+            ble_logger.warning(f'Exception calculating "TodaysEnergy": {e}')
             pass
+
+        # filter out bad values that sometimes get in
+        if "TodaysEnergy" in self.data and "DailyEnergy" in self.data and \
+          self.data["DailyEnergy"] and self.data["TodaysEnergy"] > 50:
+            ble_logger.warning(f'Deleting bad Energy value: {self.data["DailyEnergy"]}')
+            del self.data["TodaysEnergy"]
+            del self.data["DailyEnergy"]
+        if "Power" in self.data and self.data["Power"] and self.data["Power"] > 5:
+            ble_logger.warning(f"Deleting bad Power value: {self.data['Power']}")
+            del self.data["Power"]
+        if "PV1Voltage" in self.data and self.data["PV1Voltage"] and self.data["PV1Voltage"] > 400:
+            ble_logger.warning(f"Deleting bad PV1Voltage value: {self.data['PV1Voltage']}")
+            del self.data["PV1Voltage"]
+        if "PV2Voltage" in self.data and self.data["PV2Voltage"] and self.data["PV2Voltage"] > 400:
+            ble_logger.warning(f"Deleting bad PV2Voltage value: {self.data['PV2Voltage']}")
+            del self.data["PV2Voltage"]
 
         json_body = [
             {
                 "measurement": "inverter_data",
                 "tags": {
-                    "model": "M4-TL-US"
+                    "model": "M6-TL-US"
                 },
                 "time": self.data.pop('timestamp'),
                 "fields": self.data
             }
         ]
         client.create_database(os.getenv('INFLUX_DB'))
-        print(f"uploading to influx: {json_body}")
+        ble_logger.info(f"uploading to influx: {json_body}")
         r = client.write_points(json_body)
 
 
 if __name__ == "__main__":
     setup_logging(get_args())
+    ble_logger.info(f"Set up logging @ {datetime.now().astimezone().isoformat()}")
+    # ble_logger.info("Creating DeltaSolarBLE")
     d = DeltaSolarBLE()
-    d.get_data()
+    ble_logger.info("Getting data from inverter")
+    try:
+        d.get_data()
+    except Exception as e:
+        ble_logger.error("Exiting early due to error getting data from inverter!")
+        sys.exit(1)
+    ble_logger.info("Processing data")
     d.process_data()
-    
+
     if d.write_out:
+        ble_logger.info("Writing data")
         d.write_data()
 
-    print(json.dumps(d.data, indent=2))
+    ble_logger.info("Data read from inverter:")
+    ble_logger.info(json.dumps(d.data, indent=2))
 
+    ble_logger.info(f"Posting data to InfluxDB")
     d.post_data()
+    ble_logger.info(f"Exiting after successful run\n")
