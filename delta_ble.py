@@ -161,9 +161,17 @@ class DeltaSolarBLE:
 
             # get last value of "DailyEnergy" for yesterday
             try:
+                today = datetime.now().date()
+                today_midnight = datetime(today.year, today.month, today.day, 
+                                          0, 0, 0)
+                stop = today_midnight.astimezone().isoformat()
+                yesterday = today + timedelta(days=-1)
+                yesterday_midnight = datetime(yesterday.year, yesterday.month, yesterday.day, 
+                                              0, 0, 0)
+                start = yesterday_midnight.astimezone().isoformat()
                 query = f"""
                 from(bucket: "{os.getenv('INFLUX_BUCKET')}")
-                    |> range(start: -2d, stop: -1d)
+                    |> range(start: {start}, stop: {stop})
                     |> filter(fn: (r) => r["_measurement"] == "inverter_data")
                     |> filter(fn: (r) => r["_field"] == "DailyEnergy")
                     |> last()
