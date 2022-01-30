@@ -81,28 +81,28 @@ number, and then underneath is the Bluetooth MAC address (mine starts with
 
 ## Other required setup
 
-You'll need an InfluxDB server somewhere to receive the logged data that can
-be accessed via the network. This document won't cover all the details, but
-this can be run on a server you have locally, in something like AWS or Google
+You'll need an InfluxDB (version 2.0+) server somewhere to receive the logged 
+data that can be accessed via the network. This document won't cover all the details,
+but this can be run on a server you have locally, in something like AWS or Google
 Cloud, or on a virtual private server such as Digital Ocean or one of their
 competitors. Whatever it is, it should be accessible all (or most of) the time, 
 since you won't be able to view the data without it. The code in the Pi Zero
-*will* however only delete the local logs once they've been successfully 
-uploaded, so a computer that's not on *all* the time might still work okay.
-I recommend using the [`influx:1.8.6`](https://hub.docker.com/layers/influxdb/library/influxdb/1.8.6/images/sha256-19de5def6a422ee0d0735018ea9394971f15907abde0fc1c66930757677b8b4a?context=explore)
-Docker image to get things set up easily.
+by default won't store the information it reads to disk, so if the InfluxDB server
+isn't available, you'll lose that data point. This is an area that could certainly
+be improved... I recommend using the [`influx:2.1.1`](https://hub.docker.com/layers/influxdb/library/influxdb/2.1.1/images/sha256-65424caef0573e4d89757d7b01dea4ca8c5b31bd07732120422ac3519f200011?context=explore)
+Docker image to get things set up easily. You'll need a read/write API key to a 
+particular bucket on this server as well (see the
+[Influx docs](https://docs.influxdata.com/influxdb/v2.0/security/tokens/create-token/)
+for details).
 
-#### Login to InfluxDB and create a database
+#### Login to InfluxDB and create a bucket
 
-Login to your system running Influx (or connect remotely) and create a database.
+Login to your system running Influx (or connect remotely) and create a bucket.
+This is where the actual data points will be stored
 Connecting to your database may look a little different depending on how you've
-set up authentication. The easiest way I know is to ssh onto the computer
-running the actual `influx` command:
-
-```shell
-$ influx   # this command opens the influxdb client -- add connection info if connecting to a remote db
-> CREATE DATABASE solar_stats
-```
+set up authentication. I recommend following the instructions
+[here](https://docs.influxdata.com/influxdb/v2.1/organizations/buckets/create-bucket/)
+and naming the bucket `solar_stats`.
 
 ## Visualizing the data
 

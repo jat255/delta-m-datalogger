@@ -9,8 +9,11 @@ from binascii import hexlify, unhexlify
 from datetime import datetime, timezone, timedelta
 import logging
 import json
-from influxdb import InfluxDBClient
+
+from influxdb_client import InfluxDBClient
+from influxdb_client.client.write_api import SYNCHRONOUS
 from dotenv import load_dotenv
+
 import pygatt
 from ble import *
 
@@ -137,72 +140,72 @@ class DeltaSolarBLE:
 
     def post_data(self):
         if not all(key in os.environ for key in \
-                   ('INFLUX_HOST', 'INFLUX_PORT', 'INFLUX_USER',
-                    'INFLUX_PASS', 'INFLUX_DB')):
+                   ('INFLUX_HOST', 'INFLUX_PORT', 'INFLUX_TOKEN',
+                    'INFLUX_BUCKET', 'INFLUX_ORG')):
             raise EnvironmentError("One or more of the environment variables "
                                    "required for the InfluxDB connection was "
                                    "not found in the environment. Check the "
                                    ".env file for the values INFLUX_HOST, "
-                                   "INFLUX_PORT, INFLUX_USER, INFLUX_PASS, "
-                                   "and INFLUX_DB and try again")
-        client = InfluxDBClient(host=os.getenv('INFLUX_HOST'),
-                                port=int(os.getenv('INFLUX_PORT')),
-                                username=os.getenv('INFLUX_USER'),
-                                password=os.getenv('INFLUX_PASS'),
-                                database=os.getenv('INFLUX_DB'))
+                                   "INFLUX_PORT, INFLUX_TOKEN, INFLUX_ORG and INFLUX_BUCKET "
+                                   "and try again")
+        with InfluxDBClient(
+            url=f"http://{os.getenv('INFLUX_HOST')}:{int(os.getenv('INFLUX_PORT'))}",
+            token=os.getenv('INFLUX_TOKEN'), org=os.getenv('INFLUX_ORG')) as client:
 
-        # with open(os.path.join(os.path.dirname(__file__),
-        #                        '20210209_1039.json'), 'r') as f:
-        #     data = json.load(f)
+            write_api = client.write_api(write_options=SYNCHRONOUS)
+            query_api = client.query_api()
 
-        # get last value of "DailyEnergy" for yesterday
-        try:
-            y_dt = datetime.now() - timedelta(days=1)
-            y_beg = y_dt.replace(hour=0, minute=0, second=0, microsecond=0)
-            y_beg_utc = datetime.utcfromtimestamp(y_beg.timestamp())
-            y_end = y_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
-            y_end_utc = datetime.utcfromtimestamp(y_end.timestamp())
-            data = list(client.query(f'select median("DailyEnergy") FROM inverter_data WHERE time ' + \
-                                     f'> \'{y_beg_utc.strftime("%Y-%m-%d %H:%M:%S")}\' AND ' + \
-                                     f'time < \'{y_end_utc.strftime("%Y-%m-%d %H:%M:%S")}\' ' + \
-                                     f'GROUP BY time(15m)')[('inverter_data', None)])
-            last_value = [x['median'] for x in data if x['median']][-1]
-            self.data["TodaysEnergy"] = self.data["DailyEnergy"] - last_value
-            if self.data["TodaysEnergy"] < 0:
-                self.data["TodaysEnergy"] = self.data["DailyEnergy"]
-        except Exception as e:
-            ble_logger.warning(f'Exception calculating "TodaysEnergy": {e}')
-            pass
+            # with open(os.path.join(os.path.dirname(__file__),
+            #                        '20210209_1039.json'), 'r') as f:
+            #     data = json.load(f)
 
-        # filter out bad values that sometimes get in
-        if "TodaysEnergy" in self.data and "DailyEnergy" in self.data and \
-          self.data["DailyEnergy"] and self.data["TodaysEnergy"] > 50:
-            ble_logger.warning(f'Deleting bad Energy value: {self.data["DailyEnergy"]}')
-            del self.data["TodaysEnergy"]
-            del self.data["DailyEnergy"]
-        if "Power" in self.data and self.data["Power"] and self.data["Power"] > 5:
-            ble_logger.warning(f"Deleting bad Power value: {self.data['Power']}")
-            del self.data["Power"]
-        if "PV1Voltage" in self.data and self.data["PV1Voltage"] and self.data["PV1Voltage"] > 400:
-            ble_logger.warning(f"Deleting bad PV1Voltage value: {self.data['PV1Voltage']}")
-            del self.data["PV1Voltage"]
-        if "PV2Voltage" in self.data and self.data["PV2Voltage"] and self.data["PV2Voltage"] > 400:
-            ble_logger.warning(f"Deleting bad PV2Voltage value: {self.data['PV2Voltage']}")
-            del self.data["PV2Voltage"]
+            # get last value of "DailyEnergy" for yesterday
+            try:
+                query = f"""
+                from(bucket: "{os.getenv('INFLUX_BUCKET')}")
+                    |> range(start: -2d, stop: -1d)
+                    |> filter(fn: (r) => r["_measurement"] == "inverter_data")
+                    |> filter(fn: (r) => r["_field"] == "DailyEnergy")
+                    |> last()
+                """
+                data = query_api.query(query)
+                last_value = data[0].records[0].get_value()
+                print(f"last_value was {last_value}")
+                self.data["TodaysEnergy"] = self.data["DailyEnergy"] - last_value
+                if self.data["TodaysEnergy"] < 0:
+                    self.data["TodaysEnergy"] = self.data["DailyEnergy"]
+            except Exception as e:
+                ble_logger.warning(f'Exception calculating "TodaysEnergy": {e}')
+                pass
 
-        json_body = [
-            {
-                "measurement": "inverter_data",
-                "tags": {
-                    "model": "M6-TL-US"
-                },
-                "time": self.data.pop('timestamp'),
-                "fields": self.data
-            }
-        ]
-        client.create_database(os.getenv('INFLUX_DB'))
-        ble_logger.info(f"uploading to influx: {json_body}")
-        r = client.write_points(json_body)
+            # filter out bad values that sometimes get in
+            if "TodaysEnergy" in self.data and "DailyEnergy" in self.data and \
+              self.data["DailyEnergy"] and self.data["TodaysEnergy"] > 50:
+                ble_logger.warning(f'Deleting bad Energy value: {self.data["DailyEnergy"]}')
+                del self.data["TodaysEnergy"]
+                del self.data["DailyEnergy"]
+            if "Power" in self.data and self.data["Power"] and self.data["Power"] > 5:
+                ble_logger.warning(f"Deleting bad Power value: {self.data['Power']}")
+                del self.data["Power"]
+            if "PV1Voltage" in self.data and self.data["PV1Voltage"] and self.data["PV1Voltage"] > 400:
+                ble_logger.warning(f"Deleting bad PV1Voltage value: {self.data['PV1Voltage']}")
+                del self.data["PV1Voltage"]
+            if "PV2Voltage" in self.data and self.data["PV2Voltage"] and self.data["PV2Voltage"] > 400:
+                ble_logger.warning(f"Deleting bad PV2Voltage value: {self.data['PV2Voltage']}")
+                del self.data["PV2Voltage"]
+
+            json_body = [
+                {
+                    "measurement": "inverter_data",
+                    "tags": {
+                        "model": "M6-TL-US"
+                    },
+                    "time": self.data.pop('timestamp'),
+                    "fields": self.data
+                }
+            ]
+            ble_logger.info(f"uploading to influx: {json_body}")
+            write_api.write(os.getenv('INFLUX_BUCKET'), os.getenv('INFLUX_ORG'), json_body)
 
 
 if __name__ == "__main__":
