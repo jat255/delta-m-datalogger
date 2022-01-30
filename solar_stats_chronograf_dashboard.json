@@ -1,6 +1,6 @@
 {
 	"meta": {
-		"chronografVersion": "1.8.10",
+		"chronografVersion": "1.9.3",
 		"sources": {
 			"1": {
 				"name": "Influx",
@@ -14,7 +14,7 @@
 			{
 				"i": "8388eafe-a954-4235-9d19-602fed9d3069",
 				"x": 0,
-				"y": 11,
+				"y": 9,
 				"w": 12,
 				"h": 4,
 				"name": "Cumulative Energy",
@@ -147,14 +147,14 @@
 			},
 			{
 				"i": "766602d4-3e70-4129-b23f-ceab9800ce73",
-				"x": 4,
-				"y": 0,
+				"x": 0,
+				"y": 6,
 				"w": 4,
-				"h": 4,
+				"h": 3,
 				"name": "String Voltages",
 				"queries": [
 					{
-						"query": "SELECT median(\"PV1Voltage\") AS \"West\", median(\"PV2Voltage\") AS \"East\" FROM \"solar_stats\".\"autogen\".\"inverter_data\" WHERE time > :dashboardTime: AND time < :upperDashboardTime: GROUP BY time(5m) FILL(null)",
+						"query": "SELECT median(\"PV1Voltage\") AS \"West\", median(\"PV2Voltage\") AS \"East\" FROM \"solar_stats\".\"autogen\".\"inverter_data\" WHERE time > :dashboardTime: AND time < :upperDashboardTime: GROUP BY time(5m) FILL(none)",
 						"queryConfig": {
 							"database": "solar_stats",
 							"measurement": "inverter_data",
@@ -191,7 +191,7 @@
 								"tags": []
 							},
 							"areTagsAccepted": false,
-							"fill": "null",
+							"fill": "none",
 							"rawText": null,
 							"range": null,
 							"shifts": null
@@ -293,14 +293,14 @@
 			},
 			{
 				"i": "fa71948d-65c7-4d7b-b235-05b81208756c",
-				"x": 8,
-				"y": 0,
+				"x": 4,
+				"y": 6,
 				"w": 4,
-				"h": 4,
+				"h": 3,
 				"name": "String Currents",
 				"queries": [
 					{
-						"query": "SELECT median(\"PV2Current\") AS \"East\", median(\"PV1Current\") AS \"West\" FROM \"solar_stats\".\"autogen\".\"inverter_data\" WHERE time > :dashboardTime: AND time < :upperDashboardTime: GROUP BY time(5m) FILL(null)",
+						"query": "SELECT median(\"PV2Current\") AS \"East\", median(\"PV1Current\") AS \"West\" FROM \"solar_stats\".\"autogen\".\"inverter_data\" WHERE time > :dashboardTime: AND time < :upperDashboardTime: GROUP BY time(5m) FILL(none)",
 						"queryConfig": {
 							"database": "solar_stats",
 							"measurement": "inverter_data",
@@ -337,7 +337,7 @@
 								"tags": []
 							},
 							"areTagsAccepted": false,
-							"fill": "null",
+							"fill": "none",
 							"rawText": null,
 							"range": null,
 							"shifts": null
@@ -440,13 +440,13 @@
 			{
 				"i": "6941a65b-e1c6-4949-900d-c5bec2ce9198",
 				"x": 8,
-				"y": 8,
+				"y": 6,
 				"w": 4,
 				"h": 3,
 				"name": "AC Freq (Hz)",
 				"queries": [
 					{
-						"query": "SELECT median(\"ACFrequency\") AS \"median_ACFrequency\" FROM \"solar_stats\".\"autogen\".\"inverter_data\" WHERE time > :dashboardTime: AND time < :upperDashboardTime: GROUP BY time(5m) FILL(null)",
+						"query": "SELECT median(\"ACFrequency\") AS \"median_ACFrequency\" FROM \"solar_stats\".\"autogen\".\"inverter_data\" WHERE time > :dashboardTime: AND time < :upperDashboardTime: GROUP BY time(5m) FILL(none)",
 						"queryConfig": {
 							"database": "solar_stats",
 							"measurement": "inverter_data",
@@ -471,7 +471,7 @@
 								"tags": []
 							},
 							"areTagsAccepted": false,
-							"fill": "null",
+							"fill": "none",
 							"rawText": null,
 							"range": null,
 							"shifts": null
@@ -499,7 +499,7 @@
 						],
 						"label": "",
 						"prefix": "",
-						"suffix": "",
+						"suffix": " Hz",
 						"base": "10",
 						"scale": "linear"
 					},
@@ -515,10 +515,10 @@
 						"scale": "linear"
 					}
 				},
-				"type": "line",
+				"type": "line-plus-single-stat",
 				"colors": [
 					{
-						"id": "deb86903-5e65-4c7a-bf4f-c001547a4289",
+						"id": "base",
 						"type": "scale",
 						"hex": "#31C0F6",
 						"name": "Nineteen Eighty Four",
@@ -570,14 +570,14 @@
 			},
 			{
 				"i": "f6d38665-7d89-499f-b423-453e3ed27a7a",
-				"x": 4,
-				"y": 8,
+				"x": 8,
+				"y": 0,
 				"w": 4,
 				"h": 3,
 				"name": "AC Current (A)",
 				"queries": [
 					{
-						"query": "SELECT median(\"ACCurrent\") AS \"median_ACCurrent\" FROM \"solar_stats\".\"autogen\".\"inverter_data\" WHERE time > :dashboardTime: AND time < :upperDashboardTime: GROUP BY time(5m) FILL(null)",
+						"query": "SELECT median(\"ACCurrent\") AS \"median_ACCurrent\" FROM \"solar_stats\".\"autogen\".\"inverter_data\" WHERE time > :dashboardTime: AND time < :upperDashboardTime: GROUP BY time(5m) FILL(none)",
 						"queryConfig": {
 							"database": "solar_stats",
 							"measurement": "inverter_data",
@@ -602,7 +602,7 @@
 								"tags": []
 							},
 							"areTagsAccepted": false,
-							"fill": "null",
+							"fill": "none",
 							"rawText": null,
 							"range": null,
 							"shifts": null
@@ -630,7 +630,7 @@
 						],
 						"label": "",
 						"prefix": "",
-						"suffix": "",
+						"suffix": " A",
 						"base": "10",
 						"scale": "linear"
 					},
@@ -646,10 +646,10 @@
 						"scale": "linear"
 					}
 				},
-				"type": "line",
+				"type": "line-plus-single-stat",
 				"colors": [
 					{
-						"id": "deb86903-5e65-4c7a-bf4f-c001547a4289",
+						"id": "base",
 						"type": "scale",
 						"hex": "#31C0F6",
 						"name": "Nineteen Eighty Four",
@@ -701,14 +701,14 @@
 			},
 			{
 				"i": "8991da39-e4fa-4aae-81d5-4d9c3abb9541",
-				"x": 0,
-				"y": 8,
+				"x": 8,
+				"y": 3,
 				"w": 4,
 				"h": 3,
 				"name": "AC Voltage (V)",
 				"queries": [
 					{
-						"query": "SELECT median(\"ACVoltage\") AS \"median_ACVoltage\" FROM \"solar_stats\".\"autogen\".\"inverter_data\" WHERE time > :dashboardTime: AND time < :upperDashboardTime: GROUP BY time(5m) FILL(null)",
+						"query": "SELECT median(\"ACVoltage\") AS \"median_ACVoltage\" FROM \"solar_stats\".\"autogen\".\"inverter_data\" WHERE time > :dashboardTime: AND time < :upperDashboardTime: GROUP BY time(5m) FILL(none)",
 						"queryConfig": {
 							"database": "solar_stats",
 							"measurement": "inverter_data",
@@ -733,7 +733,7 @@
 								"tags": []
 							},
 							"areTagsAccepted": false,
-							"fill": "null",
+							"fill": "none",
 							"rawText": null,
 							"range": null,
 							"shifts": null
@@ -761,7 +761,7 @@
 						],
 						"label": "",
 						"prefix": "",
-						"suffix": "",
+						"suffix": " V",
 						"base": "10",
 						"scale": "linear"
 					},
@@ -777,10 +777,10 @@
 						"scale": "linear"
 					}
 				},
-				"type": "line",
+				"type": "line-plus-single-stat",
 				"colors": [
 					{
-						"id": "deb86903-5e65-4c7a-bf4f-c001547a4289",
+						"id": "base",
 						"type": "scale",
 						"hex": "#31C0F6",
 						"name": "Nineteen Eighty Four",
@@ -833,13 +833,13 @@
 			{
 				"i": "61e70a24-4f16-455b-bf9b-ea2196d9f32b",
 				"x": 4,
-				"y": 4,
-				"w": 8,
-				"h": 4,
+				"y": 0,
+				"w": 4,
+				"h": 3,
 				"name": "System Power (kW)",
 				"queries": [
 					{
-						"query": "SELECT median(\"Power\") AS \"median_Power\" FROM \"solar_stats\".\"autogen\".\"inverter_data\" WHERE time > :dashboardTime: AND time < :upperDashboardTime: GROUP BY time(5m) FILL(null)",
+						"query": "SELECT median(\"Power\") AS \"median_Power\" FROM \"solar_stats\".\"autogen\".\"inverter_data\" WHERE time > :dashboardTime: AND time < :upperDashboardTime: GROUP BY time(5m) FILL(none)",
 						"queryConfig": {
 							"database": "solar_stats",
 							"measurement": "inverter_data",
@@ -864,16 +864,10 @@
 								"tags": []
 							},
 							"areTagsAccepted": false,
-							"fill": "null",
+							"fill": "none",
 							"rawText": null,
 							"range": null,
-							"shifts": [
-								{
-									"label": "1d",
-									"unit": "d",
-									"quantity": "1"
-								}
-							]
+							"shifts": null
 						},
 						"source": "/chronograf/v1/sources/1",
 						"type": "influxql"
@@ -896,9 +890,9 @@
 							"",
 							"5"
 						],
-						"label": "",
+						"label": "System Power (kw)",
 						"prefix": "",
-						"suffix": "",
+						"suffix": " kW",
 						"base": "10",
 						"scale": "linear"
 					},
@@ -914,31 +908,34 @@
 						"scale": "linear"
 					}
 				},
-				"type": "line",
+				"type": "line-plus-single-stat",
 				"colors": [
 					{
-						"id": "deb86903-5e65-4c7a-bf4f-c001547a4289",
+						"id": "base",
 						"type": "scale",
 						"hex": "#31C0F6",
 						"name": "Nineteen Eighty Four",
 						"value": "0"
 					},
 					{
-						"id": "a9995516-83ea-4daa-b7bb-5d6fa8e6c7d7",
+						"id": "e32f0f6b-4ba1-4dfb-b852-e2dd0bd01bdf",
 						"type": "scale",
 						"hex": "#A500A5",
 						"name": "Nineteen Eighty Four",
 						"value": "0"
 					},
 					{
-						"id": "9f20ba44-35de-4290-81d6-0bc0603deec8",
+						"id": "7a466a85-eda8-4405-9c78-232d554ba198",
 						"type": "scale",
 						"hex": "#FF7E27",
 						"name": "Nineteen Eighty Four",
 						"value": "0"
 					}
 				],
-				"legend": {},
+				"legend": {
+					"type": "static",
+					"orientation": "bottom"
+				},
 				"tableOptions": {
 					"verticalTimeAxis": true,
 					"sortBy": {
@@ -972,7 +969,7 @@
 				"x": 0,
 				"y": 0,
 				"w": 4,
-				"h": 4,
+				"h": 3,
 				"name": "Daily Energy Production",
 				"queries": [
 					{
@@ -1099,15 +1096,15 @@
 				}
 			},
 			{
-				"i": "a52db053-abf2-41a2-bf48-17e29307168f",
-				"x": 0,
-				"y": 4,
+				"i": "f4d034be-863a-4d79-aae6-0bd56e8c5641",
+				"x": 8,
+				"y": 13,
 				"w": 4,
-				"h": 4,
-				"name": "Daily Production History",
+				"h": 3,
+				"name": "Electric Meter Reading",
 				"queries": [
 					{
-						"query": "SELECT MAX(median) AS \"Daily Production\" FROM (SELECT MEDIAN(\"TodaysEnergy\") FROM \"solar_stats\".\"autogen\".\"inverter_data\" WHERE time > now() - 30d AND time < now() GROUP BY time(15m)) WHERE time > now()-30d AND time < now() GROUP BY time(1d, 7h)",
+						"query": "SELECT mean(\"consumption\")/100 AS \"mean_consumption\" FROM \"rtlamr\".\"autogen\".\"utilities\" WHERE time > :dashboardTime: AND time < :upperDashboardTime: GROUP BY time(:interval:) FILL(none)",
 						"queryConfig": {
 							"database": "",
 							"measurement": "",
@@ -1119,7 +1116,7 @@
 								"tags": []
 							},
 							"areTagsAccepted": false,
-							"rawText": "SELECT MAX(median) AS \"Daily Production\" FROM (SELECT MEDIAN(\"TodaysEnergy\") FROM \"solar_stats\".\"autogen\".\"inverter_data\" WHERE time > now() - 30d AND time < now() GROUP BY time(15m)) WHERE time > now()-30d AND time < now() GROUP BY time(1d, 7h)",
+							"rawText": "SELECT mean(\"consumption\")/100 AS \"mean_consumption\" FROM \"rtlamr\".\"autogen\".\"utilities\" WHERE time > :dashboardTime: AND time < :upperDashboardTime: GROUP BY time(:interval:) FILL(none)",
 							"range": null,
 							"shifts": null
 						},
@@ -1144,10 +1141,10 @@
 							"",
 							""
 						],
-						"label": "Daily Production (kWh)",
+						"label": "Meter reading (kWh)",
 						"prefix": "",
-						"suffix": "kWh",
-						"base": "10",
+						"suffix": " kWh",
+						"base": "raw",
 						"scale": "linear"
 					},
 					"y2": {
@@ -1162,27 +1159,27 @@
 						"scale": "linear"
 					}
 				},
-				"type": "bar",
+				"type": "line-plus-single-stat",
 				"colors": [
 					{
-						"id": "deb86903-5e65-4c7a-bf4f-c001547a4289",
+						"id": "base",
 						"type": "scale",
-						"hex": "#31C0F6",
-						"name": "Nineteen Eighty Four",
+						"hex": "#FDC44F",
+						"name": "Cthulhu",
 						"value": "0"
 					},
 					{
-						"id": "a9995516-83ea-4daa-b7bb-5d6fa8e6c7d7",
+						"id": "20a59891-fd68-4b7f-a9a0-4ffcc16a11a4",
 						"type": "scale",
-						"hex": "#A500A5",
-						"name": "Nineteen Eighty Four",
+						"hex": "#007C76",
+						"name": "Cthulhu",
 						"value": "0"
 					},
 					{
-						"id": "9f20ba44-35de-4290-81d6-0bc0603deec8",
+						"id": "af883699-63b9-4afc-9962-de33555b6925",
 						"type": "scale",
-						"hex": "#FF7E27",
-						"name": "Nineteen Eighty Four",
+						"hex": "#8983FF",
+						"name": "Cthulhu",
 						"value": "0"
 					}
 				],
@@ -1217,7 +1214,244 @@
 				"note": "",
 				"noteVisibility": "default",
 				"links": {
-					"self": "/chronograf/v1/dashboards/1/cells/a52db053-abf2-41a2-bf48-17e29307168f"
+					"self": "/chronograf/v1/dashboards/1/cells/f4d034be-863a-4d79-aae6-0bd56e8c5641"
+				}
+			},
+			{
+				"i": "8aae53c5-0b83-4adc-b837-707d0c218171",
+				"x": 0,
+				"y": 3,
+				"w": 4,
+				"h": 3,
+				"name": "Daily Production History",
+				"queries": [
+					{
+						"query": "import \"timezone\" \noption location = timezone.location(name: \"America/Denver\")\n\nfrom(bucket: \"solar_stats/autogen\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"inverter_data\" and (r._field == \"TodaysEnergy\" and r._value >= 0))\n  |> aggregateWindow(every: 1d, fn: last, createEmpty: true)\n  |> group()\n  |> sort(columns: [\"_time\"], desc: false)\n  |> yield()",
+						"queryConfig": {
+							"database": "",
+							"measurement": "",
+							"retentionPolicy": "",
+							"fields": [],
+							"tags": {},
+							"groupBy": {
+								"time": "",
+								"tags": []
+							},
+							"areTagsAccepted": false,
+							"rawText": "import \"timezone\" \noption location = timezone.location(name: \"America/Denver\")\n\nfrom(bucket: \"solar_stats/autogen\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"inverter_data\" and (r._field == \"TodaysEnergy\" and r._value >= 0))\n  |> aggregateWindow(every: 1d, fn: last, createEmpty: true)\n  |> group()\n  |> sort(columns: [\"_time\"], desc: false)\n  |> yield()",
+							"range": null,
+							"shifts": null
+						},
+						"source": "/chronograf/v1/sources/1",
+						"type": "flux"
+					}
+				],
+				"axes": {
+					"x": {
+						"bounds": [
+							"",
+							""
+						],
+						"label": "",
+						"prefix": "",
+						"suffix": "",
+						"base": "10",
+						"scale": "linear"
+					},
+					"y": {
+						"bounds": [
+							"",
+							""
+						],
+						"label": "Daily Production (kWh)",
+						"prefix": "",
+						"suffix": "",
+						"base": "10",
+						"scale": "linear"
+					},
+					"y2": {
+						"bounds": [
+							"",
+							""
+						],
+						"label": "",
+						"prefix": "",
+						"suffix": "",
+						"base": "10",
+						"scale": "linear"
+					}
+				},
+				"type": "bar",
+				"colors": [
+					{
+						"id": "0383d622-39b8-47f8-ac15-685ce89960df",
+						"type": "scale",
+						"hex": "#31C0F6",
+						"name": "Nineteen Eighty Four",
+						"value": "0"
+					},
+					{
+						"id": "47146c2d-26b2-4a5f-b44f-3d32027a5f4a",
+						"type": "scale",
+						"hex": "#A500A5",
+						"name": "Nineteen Eighty Four",
+						"value": "0"
+					},
+					{
+						"id": "7cc1ea9c-f917-4fa8-a08f-2ef2a7b03046",
+						"type": "scale",
+						"hex": "#FF7E27",
+						"name": "Nineteen Eighty Four",
+						"value": "0"
+					}
+				],
+				"legend": {
+					"type": "static",
+					"orientation": "bottom"
+				},
+				"tableOptions": {
+					"verticalTimeAxis": true,
+					"sortBy": {
+						"internalName": "time",
+						"displayName": "",
+						"visible": true
+					},
+					"wrapping": "truncate",
+					"fixFirstColumn": true
+				},
+				"fieldOptions": [
+					{
+						"internalName": "time",
+						"displayName": "",
+						"visible": true
+					}
+				],
+				"timeFormat": "MM/DD/YYYY HH:mm:ss",
+				"decimalPlaces": {
+					"isEnforced": true,
+					"digits": 2
+				},
+				"note": "",
+				"noteVisibility": "default",
+				"links": {
+					"self": "/chronograf/v1/dashboards/1/cells/8aae53c5-0b83-4adc-b837-707d0c218171"
+				}
+			},
+			{
+				"i": "01f1915b-d2c0-458e-8256-4a2d2d6132cc",
+				"x": 4,
+				"y": 3,
+				"w": 4,
+				"h": 3,
+				"name": "Monthly Production History",
+				"queries": [
+					{
+						"query": "import \"timezone\" \noption location = timezone.location(name: \"America/Denver\")\n\nfrom(bucket: \"solar_stats/autogen\")\n  |> range(start: -1y)\n  |> filter(fn: (r) => r._measurement == \"inverter_data\" and (r._field == \"TodaysEnergy\" and r._value >= 0))\n  |> aggregateWindow(every: 1d, fn: last)\n  |> group()\n  |> sort(columns: [\"_time\"], desc: false)\n  |> timeShift(duration: -1d)\n  |> aggregateWindow(every: 1mo, fn: sum)\n  |> group()",
+						"queryConfig": {
+							"database": "",
+							"measurement": "",
+							"retentionPolicy": "",
+							"fields": [],
+							"tags": {},
+							"groupBy": {
+								"time": "",
+								"tags": []
+							},
+							"areTagsAccepted": false,
+							"rawText": "import \"timezone\" \noption location = timezone.location(name: \"America/Denver\")\n\nfrom(bucket: \"solar_stats/autogen\")\n  |> range(start: -1y)\n  |> filter(fn: (r) => r._measurement == \"inverter_data\" and (r._field == \"TodaysEnergy\" and r._value >= 0))\n  |> aggregateWindow(every: 1d, fn: last)\n  |> group()\n  |> sort(columns: [\"_time\"], desc: false)\n  |> timeShift(duration: -1d)\n  |> aggregateWindow(every: 1mo, fn: sum)\n  |> group()",
+							"range": null,
+							"shifts": null
+						},
+						"source": "/chronograf/v1/sources/1",
+						"type": "flux"
+					}
+				],
+				"axes": {
+					"x": {
+						"bounds": [
+							"",
+							""
+						],
+						"label": "",
+						"prefix": "",
+						"suffix": "",
+						"base": "10",
+						"scale": "linear"
+					},
+					"y": {
+						"bounds": [
+							"",
+							""
+						],
+						"label": "Monthly Production (kWh)",
+						"prefix": "",
+						"suffix": "",
+						"base": "10",
+						"scale": "linear"
+					},
+					"y2": {
+						"bounds": [
+							"",
+							""
+						],
+						"label": "",
+						"prefix": "",
+						"suffix": "",
+						"base": "10",
+						"scale": "linear"
+					}
+				},
+				"type": "bar",
+				"colors": [
+					{
+						"id": "0383d622-39b8-47f8-ac15-685ce89960df",
+						"type": "scale",
+						"hex": "#31C0F6",
+						"name": "Nineteen Eighty Four",
+						"value": "0"
+					},
+					{
+						"id": "47146c2d-26b2-4a5f-b44f-3d32027a5f4a",
+						"type": "scale",
+						"hex": "#A500A5",
+						"name": "Nineteen Eighty Four",
+						"value": "0"
+					},
+					{
+						"id": "7cc1ea9c-f917-4fa8-a08f-2ef2a7b03046",
+						"type": "scale",
+						"hex": "#FF7E27",
+						"name": "Nineteen Eighty Four",
+						"value": "0"
+					}
+				],
+				"legend": {},
+				"tableOptions": {
+					"verticalTimeAxis": true,
+					"sortBy": {
+						"internalName": "time",
+						"displayName": "",
+						"visible": true
+					},
+					"wrapping": "truncate",
+					"fixFirstColumn": true
+				},
+				"fieldOptions": [
+					{
+						"internalName": "time",
+						"displayName": "",
+						"visible": true
+					}
+				],
+				"timeFormat": "MM/DD/YYYY HH:mm:ss",
+				"decimalPlaces": {
+					"isEnforced": true,
+					"digits": 2
+				},
+				"note": "",
+				"noteVisibility": "default",
+				"links": {
+					"self": "/chronograf/v1/dashboards/1/cells/01f1915b-d2c0-458e-8256-4a2d2d6132cc"
 				}
 			}
 		],
