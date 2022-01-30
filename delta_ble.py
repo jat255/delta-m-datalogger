@@ -170,7 +170,7 @@ class DeltaSolarBLE:
                 """
                 data = query_api.query(query)
                 last_value = data[0].records[0].get_value()
-                print(f"last_value was {last_value}")
+                ble_logger.info(f"Yesterday's last energy value was {last_value}")
                 self.data["TodaysEnergy"] = self.data["DailyEnergy"] - last_value
                 if self.data["TodaysEnergy"] < 0:
                     self.data["TodaysEnergy"] = self.data["DailyEnergy"]
