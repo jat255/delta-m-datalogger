@@ -79,6 +79,13 @@ You should see the name "M4-TL-US", together with your inverter's serial
 number, and then underneath is the Bluetooth MAC address (mine starts with
 `54:1E:01`). That value is the MAC address you should put in the `.env` file. 
 
+There are also some settings in the `.env` file for configuring SMTP email
+alerts. These will be sent if the code is not able to upload data to InfluxDB
+so it will not be lost (the current inverter reading will also be dumped to
+the current directory as JSON so it can be manually imported later). If these
+are not configured, then email sending will fail (but that part isn't critical,
+it will just log the failure and continue on).
+
 ## Other required setup
 
 You'll need an InfluxDB (version 2.0+) server somewhere to receive the logged 

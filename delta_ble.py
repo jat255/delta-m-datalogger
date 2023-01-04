@@ -7,6 +7,8 @@ from collections import defaultdict
 from tqdm import tqdm
 from binascii import hexlify, unhexlify
 from datetime import datetime, timezone, timedelta
+import smtplib
+import socket
 import logging
 import json
 
@@ -61,6 +63,7 @@ class DeltaSolarBLE:
         self.adapter = pygatt.GATTToolBackend(search_window_size=2048)
         self.dt = datetime.now(timezone.utc)
         self.write_out = write_out
+        self.logger = logging.getLogger('DeltaSolarBLE')
 
     def handle_data(self, handle, value):
         """
@@ -79,6 +82,41 @@ class DeltaSolarBLE:
                 f"Received data: {value} -- {hexlify(value)} -- {message}")
             self.data[self.last_message_title].append(message)
             ble_logger.debug(f"Appending to {self.last_message_title} data!")
+
+    def send_alert_email(
+        self,
+        subject="Delta Solar Tracker data log",
+        msg=""
+    ):
+        for var in ['EMAIL_SMTP_HOST', 'EMAIL_SMTP_PORT', 'EMAIL_TO_ADDRESS']:
+            if os.getenv(var) is None:
+                self.logger.warning(
+                    f"{var} environment variable was not defined, so cannot send email"
+                )
+            return
+        try:
+            smtpObj = smtplib.SMTP(
+                os.getenv('EMAIL_SMTP_HOST'),
+                os.getenv('EMAIL_SMTP_PORT')
+            )
+            from_address = f"delta_solar_tracker@{socket.gethostname()}"
+            message = f"""From: Delta Solar Tracker <{from_address}>
+Subject: {subject}
+
+{msg}
+
+{json.dumps(self.data, indent=2)}
+"""
+
+            smtpObj.sendmail(
+                from_address,
+                os.getenv('EMAIL_TO_ADDRESS').split(','),
+                message
+            )
+            self.logger.info("Successfully sent email")
+        except Exception as e:
+            self.logger.error("Unable to send email:")
+            self.logger.error(e)
 
     def get_data(self):
         try:
@@ -238,5 +276,14 @@ if __name__ == "__main__":
     ble_logger.info(json.dumps(d.data, indent=2))
 
     ble_logger.info(f"Posting data to InfluxDB")
-    d.post_data()
+    try:
+        d.post_data()
+    except Exception as e:
+        ble_logger.error(f"Error posting data to InfluxDB; writing to disk instead")
+        d.write_data()
+        ble_logger.error(f"Sending alert email")
+        d.send_alert_email(
+            subject="Could not upload data to InfluxDB!",
+            msg="Delta solar tracker could not upload data to influxdb; including below so it is not lost"
+        )
     ble_logger.info(f"Exiting after successful run\n")

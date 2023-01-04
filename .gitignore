@@ -5,3 +5,4 @@ __pycache__/
 logs/
 nano.save
 old_json_output/
+*.json
