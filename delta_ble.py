@@ -48,6 +48,15 @@ def setup_logging(args):
     logging.getLogger('pygatt').setLevel(verbosity_map[args.verbose - 1])
     ble_logger.setLevel(verbosity_map[args.verbose])
 
+    # set up loki logging if configured
+    if "LOKI_ENDPOINT" in os.environ:
+        import logging_loki
+        loki_handler = logging_loki.LokiHandler(
+            url=os.environ.get("LOKI_ENDPOINT"),
+            tags={"application": "delta-solar-tracker"},
+            version="1"
+        )
+        ble_logger.addHandler(loki_handler)
 
 class DeltaSolarBLE:
     ignored_messages = [

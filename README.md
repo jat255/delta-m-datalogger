@@ -86,6 +86,11 @@ the current directory as JSON so it can be manually imported later). If these
 are not configured, then email sending will fail (but that part isn't critical,
 it will just log the failure and continue on).
 
+One potentially useful setting in the `.env` file is the `LOKI_ENDPOINT` value.
+If this is set to a Loki push API endpoint (see the example file for the expected
+format), the application will push logs to that endpoint so they can be viewed using
+Grafana, alongside the dashboards.
+
 ## Other required setup
 
 You'll need an InfluxDB (version 2.0+) server somewhere to receive the logged 
