@@ -11,18 +11,23 @@ import smtplib
 import socket
 import logging
 import json
+import asyncio
+from rich.console import Console
+from rich.logging import RichHandler
 
 from influxdb_client import InfluxDBClient
 from influxdb_client.client.write_api import SYNCHRONOUS
 from dotenv import load_dotenv
 
 import pygatt
+from bleak import BleakClient, BleakGATTCharacteristic
 from ble import *
 
 FILE_DIR = os.path.dirname(os.path.abspath(__file__))
 DOTENV_PATH = os.path.join(FILE_DIR, '.env')
 load_dotenv(dotenv_path=DOTENV_PATH)
 ble_logger = logging.getLogger()
+
 
 def get_args():
     arg_parser = ArgumentParser(description="Log Delta Inverter data")
@@ -44,8 +49,11 @@ def setup_logging(args):
         2: logging.DEBUG,
         3: logging.DEBUG
     }
-    logging.basicConfig(level=logging.DEBUG)
-    logging.getLogger('pygatt').setLevel(verbosity_map[args.verbose - 1])
+    logging.basicConfig(level=logging.DEBUG, handlers=[RichHandler(rich_tracebacks=True)])
+    sub_level = verbosity_map[args.verbose - 1] if args.verbose > 0 else 0
+    logging.getLogger('urllib3.connectionpool').setLevel(sub_level)
+    logging.getLogger('pygatt').setLevel(sub_level)
+    logging.getLogger('bleak.backends').setLevel(sub_level)
     ble_logger.setLevel(verbosity_map[args.verbose])
 
     # set up loki logging if configured
@@ -64,6 +72,8 @@ class DeltaSolarBLE:
         "PowerVersion", "SafetyVersion", "HasRGM", "CurrentPowerError",
         "CurrentSafetyError", "SyncDetail", "SynchronizationProgress",
         "SynchronizationLength", "CheckData2"]
+    UUID_WRITE = "ee6d7171-88c6-11e8-b444-060400ef5315"
+    UUID_NOTIFY = "ee6d7172-88c6-11e8-b444-060400ef5315"
 
     def __init__(self, write_out=False):
         self.data = defaultdict(list)
@@ -91,6 +101,25 @@ class DeltaSolarBLE:
                 f"Received data: {value} -- {hexlify(value)} -- {message}")
             self.data[self.last_message_title].append(message)
             ble_logger.debug(f"Appending to {self.last_message_title} data!")
+
+    def handle_data_bleak(self, sender: BleakGATTCharacteristic, data: bytearray):
+        """
+        handle -- integer, characteristic read handle the data was received on
+        value -- bytearray, the data returned in the notification
+        """
+        if self.last_message_title in self.ignored_messages:
+            return
+
+        try:
+            message = getMessageContent_bytes(data)
+        except:
+            message = ""
+        if message:
+            ble_logger.debug(
+                f"Received data: {data} -- {hexlify(data)} -- {message}")
+            self.data[self.last_message_title].append(message)
+            ble_logger.debug(f"Appending to {self.last_message_title} data!")
+
 
     def send_alert_email(
         self,
@@ -127,9 +156,31 @@ Subject: {subject}
             self.logger.error("Unable to send email:")
             self.logger.error(e)
 
-    def get_data(self):
+    async def get_data_bleak(self):
+        async with BleakClient(self.mac) as client:
+            ble_logger.debug(f"starting Bleak get_data")
+            await client.start_notify(self.UUID_NOTIFY, self.handle_data_bleak)
+            for h in sent_values:
+                if h in message_string_by_hex:
+                    name = message_string_by_hex[h]
+                else:
+                    name = 'Unknown'
+
+                time.sleep(.50)
+                ble_logger.debug(f"Writing {name} : {h}")
+                self.last_message_title = name
+                await client.write_gatt_char(self.UUID_WRITE, unhexlify(h), response=True)
+            await client.stop_notify(self.UUID_NOTIFY)
+
+    def get_data_pygatt(self):
+        """
+        This is a deprecated function that stopped working sometimne around Feb. 2024 on my
+        Raspberry Pi, probably due to gatttool being deprecated on Linux. Use get_data_bleak() instead
+        """
         try:
+            ble_logger.debug(f"starting pygatt adapter")
             self.adapter.start()
+            ble_logger.debug(f"connecting to {self.mac}")
             device = self.adapter.connect(self.mac)
             uuid_write = "ee6d7171-88c6-11e8-b444-060400ef5315"
             uuid_notify = "ee6d7172-88c6-11e8-b444-060400ef5315"
@@ -150,7 +201,7 @@ Subject: {subject}
                 device.char_write(uuid_write, unhexlify(h), False)
 
         except Exception as e:
-            ble_logger.error(f"Received exception getting data via BT-LE: {e}")
+            ble_logger.error(f"Received exception getting data via BT-LE: {e.__repr__()}")
             self.adapter.stop()
             raise e
         finally:
@@ -224,16 +275,52 @@ Subject: {subject}
                     |> last()
                 """
                 data = query_api.query(query)
-                last_value = data[0].records[0].get_value()
-                ble_logger.info(f"Yesterday's last energy value was {last_value}")
-                self.data["TodaysEnergy"] = self.data["DailyEnergy"] - last_value
+                yesterday_last_value = data[0].records[0].get_value()
+                ble_logger.info(f"Yesterday's last energy value was {yesterday_last_value}")
+                ble_logger.info(f"Caculating TodaysEnergy")
+                self.data["TodaysEnergy"] = self.data["DailyEnergy"] - yesterday_last_value
                 if self.data["TodaysEnergy"] < 0:
+                    ble_logger.warning(f"TodaysEnergy was negative: {self.data['TodaysEnergy']}, so setting to DailyEnergy: {self.data['DailyEnergy']}")
                     self.data["TodaysEnergy"] = self.data["DailyEnergy"]
+
+                # get most recent "DailyEnergy" value by looking at last 3 hours
+                ble_logger.debug("Creating timedelta")
+                diff = timedelta(hours=3)
+                query = f"""
+                from(bucket: "{os.getenv('INFLUX_BUCKET')}")
+                    |> range(
+                        start: {(datetime.now() - diff).astimezone().isoformat()}, 
+                        stop: {datetime.now().astimezone().isoformat()})
+                    |> filter(fn: (r) => r["_measurement"] == "inverter_data")
+                    |> filter(fn: (r) => r["_field"] == "DailyEnergy")
+                    |> last()
+                """
+                # ble_logger.debug(f"Query is: \"{query}\"")
+                data = query_api.query(query)
+                ble_logger.debug("Executed query")
+                data_0 = data[0]
+                # ble_logger.info(f"data_0 value was {data_0}")
+                most_recent_DailyEnergy = data_0.records[0].get_value()
+                most_recent_time = data_0.records[0].get_time()
+                current_time = datetime.fromisoformat(self.data['timestamp'])
+                ble_logger.info(f"Most recent DailyEnergy value was {most_recent_DailyEnergy}")
+                ble_logger.info(f"Most recent time value was {most_recent_time}")
+
             except Exception as e:
                 ble_logger.warning(f'Exception calculating "TodaysEnergy": {e}')
                 pass
 
             # filter out bad values that sometimes get in
+
+            # calculate rate of generation between this measurement and last
+            time_diff_hours = (current_time - most_recent_time).seconds / 3600
+            energy_diff_kWh = self.data["DailyEnergy"] - most_recent_DailyEnergy
+            generation_rate = energy_diff_kWh / time_diff_hours
+            ble_logger.info(f"Cacluated generation_rate was {generation_rate} kW")
+            if "TodaysEnergy" in self.data and "DailyEnergy" in self.data and generation_rate > 5:
+                ble_logger.warning(f'Deleting bad Energy values because rate was too high: DailyEnergy: {self.data["DailyEnergy"]}; TodaysEnergy: {self.data["TodaysEnergy"]}; generation_rate: {generation_rate}')
+                del self.data["TodaysEnergy"]
+                del self.data["DailyEnergy"]
             if "TodaysEnergy" in self.data and "DailyEnergy" in self.data and \
               self.data["DailyEnergy"] and self.data["TodaysEnergy"] > 50:
                 ble_logger.warning(f'Deleting bad Energy value: {self.data["DailyEnergy"]}')
@@ -269,11 +356,25 @@ if __name__ == "__main__":
     # ble_logger.info("Creating DeltaSolarBLE")
     d = DeltaSolarBLE()
     ble_logger.info("Getting data from inverter")
-    try:
-        d.get_data()
-    except Exception as e:
-        ble_logger.error("Exiting early due to error getting data from inverter!")
-        sys.exit(1)
+    
+    # tries three times before giving up
+    do_loop = True
+    tries = 0
+    while do_loop:
+        tries += 1
+        try:
+            asyncio.run(d.get_data_bleak())
+            do_loop = False
+        except Exception as e:
+            if tries >= 3:
+                ble_logger.error("Exiting early due to error getting data from inverter three times!")
+                ble_logger.exception(e)
+                sys.exit(1)
+            else:
+                ble_logger.error(f"Error getting data from inverter on attempt {tries}, will try again")
+                ble_logger.exception(e)
+            
+
     ble_logger.info("Processing data")
     d.process_data()
 

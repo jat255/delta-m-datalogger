@@ -1,6 +1,10 @@
+async-timeout==4.0.3
+asyncore-wsgi==0.0.11
+bleak==0.21.1
 certifi==2020.12.5
 chardet==4.0.0
 ciso8601==2.2.0
+dbus-fast==2.21.1
 enum-compat==0.0.3
 idna==2.10
 influxdb-client==1.25.0
@@ -21,3 +25,4 @@ setuptools==49.2.1
 six==1.15.0
 tqdm==4.56.0
 urllib3==1.26.3
+rich==13.7.0
