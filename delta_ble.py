@@ -276,6 +276,7 @@ Subject: {subject}
                 """
                 data = query_api.query(query)
                 yesterday_last_value = data[0].records[0].get_value()
+                yesterday_last_time = data[0].records[0].get_time()
                 ble_logger.info(f"Yesterday's last energy value was {yesterday_last_value}")
                 ble_logger.info(f"Caculating TodaysEnergy")
                 self.data["TodaysEnergy"] = self.data["DailyEnergy"] - yesterday_last_value
@@ -298,24 +299,36 @@ Subject: {subject}
                 # ble_logger.debug(f"Query is: \"{query}\"")
                 data = query_api.query(query)
                 ble_logger.debug("Executed query")
-                data_0 = data[0]
-                # ble_logger.info(f"data_0 value was {data_0}")
-                most_recent_DailyEnergy = data_0.records[0].get_value()
-                most_recent_time = data_0.records[0].get_time()
+                if not data:
+                    # maybe first run of the day, so there's no data yet today
+                    most_recent_DailyEnergy = yesterday_last_value
+                    most_recent_time = yesterday_last_time
+                    ble_logger.info(f"Using yesterday's last value as most recent energy/time: {yesterday_last_time}/{yesterday_last_value} kWh")
+                else:
+                    data_0 = data[0]
+                    ble_logger.info(f"data_0 value was {data_0}")
+                    most_recent_DailyEnergy = data_0.records[0].get_value()
+                    most_recent_time = data_0.records[0].get_time()
                 current_time = datetime.fromisoformat(self.data['timestamp'])
                 ble_logger.info(f"Most recent DailyEnergy value was {most_recent_DailyEnergy}")
                 ble_logger.info(f"Most recent time value was {most_recent_time}")
 
             except Exception as e:
+                import web_pdb; web_pdb.set_trace()
                 ble_logger.warning(f'Exception calculating "TodaysEnergy": {e}')
                 pass
 
             # filter out bad values that sometimes get in
 
             # calculate rate of generation between this measurement and last
-            time_diff_hours = (current_time - most_recent_time).seconds / 3600
-            energy_diff_kWh = self.data["DailyEnergy"] - most_recent_DailyEnergy
-            generation_rate = energy_diff_kWh / time_diff_hours
+            if most_recent_time == yesterday_last_time:
+                # if this is the first measurement of the day, set generation rate to 0
+                generation_rate = 0
+            else:
+                time_diff_hours = (current_time - most_recent_time).seconds / 3600
+                energy_diff_kWh = self.data["DailyEnergy"] - most_recent_DailyEnergy
+                generation_rate = energy_diff_kWh / time_diff_hours
+    
             ble_logger.info(f"Cacluated generation_rate was {generation_rate} kW")
             if "TodaysEnergy" in self.data and "DailyEnergy" in self.data and generation_rate > 5:
                 ble_logger.warning(f'Deleting bad Energy values because rate was too high: DailyEnergy: {self.data["DailyEnergy"]}; TodaysEnergy: {self.data["TodaysEnergy"]}; generation_rate: {generation_rate}')
